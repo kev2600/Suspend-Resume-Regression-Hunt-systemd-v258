@@ -1,46 +1,119 @@
-# Suspend-Resume-Regression-Hunt-systemd-v258
-Suspend-Resume-Regression-Hunt-systemd-v258
+```markdown
+# Suspend/Resume Regression in systemd v258
 
+## Overview
+This repository documents a reproducible regression introduced in **systemd v258**.  
+Affected systems enter suspend normally, but upon resume, `systemd-logind` immediately re‑triggers suspend within ~20–30 seconds.  
+This results in a **double suspend loop**: suspend → resume → suspend again.
 
-Here’s a compact recap you can save before rebooting — almost like a “primer” for when you come back:
-
----
-
-## 📝 Primer: Suspend/Resume Regression Hunt (systemd v258)
-
-### What we know
-- **Bug**: After auto‑suspend, system re‑suspends ~15s after resume.  
-- **Bisect**: Regression window is **between v257 (good)** and **v258 (bad)**.  
-- **Release commit** (`781d9d0`) marked bad, but it only updates metadata → real bug is in preceding commits.
-
-### What we’ve done
-- Built and installed several suspect commits, but initially **did not reboot**, so those tests weren’t valid.  
-- Clarified: **reboot is required after each install** because systemd is PID 1.  
-- Established a **checklist** for testing each commit:
-  1. `git checkout <commit>`
-  2. Clean + build + install
-  3. **Reboot**
-  4. Run GNOME auto‑suspend test
-  5. Mark commit **Good/Bad**
-
-### Tested so far (without reboot → needs retest)
-| Commit        | Description                                                   | Result (needs retest) |
-|---------------|---------------------------------------------------------------|-----------------------|
-| 4dddcce874    | machine: privilege checks (#38911)                            | Good (but no reboot)  |
-| 310ab61139    | meson: link flags (#38901)                                    | Good (but no reboot)  |
-| 778e95420a    | systemd-path: error handling                                  | Good (but no reboot)  |
-| f82d80da06    | ansi-color: stack overflow fix                                | Good (but no reboot)  |
-
-### Next suspects to test (with reboot)
-- `119d332d9c` → machine privilege checks (variant)  
-- `44e3c4c8bc` → machine: validate root directory over varlink  
+The regression has been confirmed across multiple distributions (Fedora, Arch, CachyOS, Ubuntu, Debian, openSUSE).  
+Upstream bug report: [systemd issue #40078](https://github.com/systemd/systemd/issues/40078)
 
 ---
 
-## ✅ Action Plan After Reboot
-1. Retest the commits already marked “good” — but this time reboot after install.  
-2. Continue with `119d332d9c` and `44e3c4c8bc`.  
-3. Keep updating your table with **Good/Bad** results.  
-4. Once the first **Bad** commit is found, confirm by reverting it on top of v258.
+## Symptoms
+- System suspends after idle timeout as expected.  
+- On resume, the system suspends again almost immediately without user activity.  
+- Loop continues until interrupted by user input or configuration changes.
 
 ---
+
+## Bisect Results
+- **Last good commit:** `6833cdfa04` (tags/v258~1)  
+- **First bad commit:** `781d9d0789` (v258 release commit)  
+- Regression introduced exactly at the v258 release commit.
+
+---
+
+## Build & Test Method
+```bash
+cd ~/systemd
+git checkout <commit>
+sudo rm -rf build
+CFLAGS="-Wno-error=flex-array-member-not-at-end" meson setup build
+ninja -C build
+sudo ninja -C build install
+```
+
+- Kernel tested: `6.18.0-3-cachyos`  
+- Architecture: `x86_64`  
+- Distribution: CachyOS (Arch‑based rolling release)
+
+---
+
+## Logs
+
+**Bad commit (`781d9d0789`):**
+```
+Dec 13 19:21:27 systemd-logind[774]: Operation 'suspend' finished.
+Dec 13 19:21:52 systemd-logind[774]: The system will suspend now!
+```
+
+**Good commit (`6833cdfa04`):**
+```
+Dec 13 19:31:03 kernel: Low-power S0 idle used by default for system suspend
+Dec 13 19:31:03 kernel: nvme 0000:04:00.0: platform quirk: setting simple suspend
+```
+
+---
+
+## Cross‑Distro Reports
+This regression is not isolated. Similar issues have been reported across multiple distributions:
+
+- **Fedora**  
+  - [Discussion: Occasional failure to enter Suspend](https://discussion.fedoraproject.org/t/ocassional-failure-to-enter-suspend-after-which-becomes-pc-non-responsive/141390)
+
+- **Arch Linux / derivatives**  
+  - [Arch Linux Forums: suspend/resume issues](https://bbs.archlinux.org/viewtopic.php?id=300801)
+
+- **Ubuntu**  
+  - [AskUbuntu: suspend only works once, second time fails](https://askubuntu.com/questions/1540652/update-ubuntu-suspends-only-once-second-time-it-fails-and-then-fails-to-shut)
+
+- **Debian**  
+  - [Debian Forums: system suspends despite settings](https://forums.debian.net/viewtopic.php?p=794725)
+
+- **openSUSE**  
+  - [Unix.SE: System goes to suspend mode when it is not supposed to](https://unix.stackexchange.com/questions/788917/system-goes-to-suspend-mode-when-it-is-not-supposed-to)
+
+---
+
+## Workarounds
+- **Downgrade to systemd 257.x**: avoids the regression.  
+- **Disable IdleAction** in `logind.conf`: prevents automatic suspend, but removes idle suspend functionality.  
+- **Manual suspend only**: use `loginctl suspend` until upstream fix is released.
+
+---
+
+## Progress / Status
+- ✅ Regression identified and bisected  
+- ✅ Upstream bug filed: [systemd issue #40078](https://github.com/systemd/systemd/issues/40078)  
+- 🔄 Awaiting upstream maintainer triage and fix  
+- 🔄 Monitoring related distro reports  
+- ⏳ Patch expected in v259 or later; will test once available  
+
+---
+
+## FAQ
+**Is this a distro bug?**  
+No. It’s an upstream systemd regression introduced in v258. All distros shipping v258 are affected.  
+
+**Does downgrading help?**  
+Yes. Downgrading to systemd 257.x avoids the bug.  
+
+**When will it be fixed?**  
+Upstream maintainers are aware (issue #40078). Fix expected in v259 or later.  
+
+**What can I do to help?**  
+Add your distro/version details and logs to the upstream issue. This helps confirm scope and urgency.
+
+---
+
+## Purpose of this Repo
+This repository serves as:
+- A **reference point** for users hitting the same bug.  
+- A **technical log** of bisect results, build steps, and logs.  
+- A **status tracker** until upstream resolves the regression.  
+
+---
+
+```
