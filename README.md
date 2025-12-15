@@ -129,8 +129,6 @@ journalctl -b | grep -i logind
 # Show kernel power management events
 journalctl -b | grep -i PM:
 ```
-
-```
 After resuming from suspend, systemd-logind repeatedly triggers new suspend cycles every ~20s:
 
 Dec 15 04:53:56 PM: suspend exit
@@ -139,4 +137,5 @@ Dec 15 04:54:47 systemd-logind[790]: The system will suspend now!
 Dec 15 04:55:16 systemd-logind[790]: The system will suspend now!
 ...
 
-This does not occur on systemd v257. Regression introduced in v258.```
+This does not occur on systemd v257. Regression introduced in v258.
+
