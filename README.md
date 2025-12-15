@@ -128,13 +128,40 @@ journalctl -b | grep -i logind
 
 # Show kernel power management events
 journalctl -b | grep -i PM:
+
+# Single command to show single command that will give you just the suspend/resume loop evidence, including both the kernel events and the logind triggers
+journalctl -b | grep -E "The system will suspend now|Operation 'suspend' finished|PM: suspend"
+
 ```
 After resuming from suspend, systemd-logind repeatedly triggers new suspend cycles every ~20s:
 
-Dec 15 04:53:56 PM: suspend exit
-Dec 15 04:54:17 systemd-logind[790]: The system will suspend now!
-Dec 15 04:54:47 systemd-logind[790]: The system will suspend now!
-Dec 15 04:55:16 systemd-logind[790]: The system will suspend now!
+Dec 15 04:53:56 kev kernel: PM: suspend exit
+Dec 15 04:53:56 kev systemd-logind[790]: Operation 'suspend' finished.
+Dec 15 04:54:17 kev systemd-logind[790]: The system will suspend now!
+Dec 15 04:54:19 kev kernel: PM: suspend entry (s2idle)
+Dec 15 04:54:24 kev kernel: PM: suspend exit
+Dec 15 04:54:24 kev systemd-logind[790]: Operation 'suspend' finished.
+Dec 15 04:54:47 kev systemd-logind[790]: The system will suspend now!
+Dec 15 04:54:49 kev kernel: PM: suspend entry (s2idle)
+Dec 15 04:54:54 kev kernel: PM: suspend exit
+Dec 15 04:54:54 kev systemd-logind[790]: Operation 'suspend' finished.
+Dec 15 04:55:16 kev systemd-logind[790]: The system will suspend now!
+Dec 15 04:55:18 kev kernel: PM: suspend entry (s2idle)
+Dec 15 04:55:24 kev kernel: PM: suspend exit
+Dec 15 04:55:24 kev systemd-logind[790]: Operation 'suspend' finished.
+Dec 15 04:55:47 kev systemd-logind[790]: The system will suspend now!
+Dec 15 04:55:49 kev kernel: PM: suspend entry (s2idle)
+Dec 15 04:55:53 kev kernel: PM: suspend exit
+Dec 15 04:55:53 kev systemd-logind[790]: Operation 'suspend' finished.
+Dec 15 04:56:15 kev systemd-logind[790]: The system will suspend now!
+Dec 15 04:56:17 kev kernel: PM: suspend entry (s2idle)
+Dec 15 04:56:22 kev kernel: PM: suspend exit
+Dec 15 04:56:22 kev systemd-logind[790]: Operation 'suspend' finished.
+Dec 15 04:56:43 kev systemd-logind[790]: The system will suspend now!
+Dec 15 04:56:46 kev kernel: PM: suspend entry (s2idle)
+Dec 15 04:56:53 kev kernel: PM: suspend exit
+Dec 15 04:56:53 kev systemd-logind[790]: Operation 'suspend' finished.
+
 ...
 
 This does not occur on systemd v257. Regression introduced in v258.
