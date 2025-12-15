@@ -112,8 +112,21 @@ Add your distro/version details and logs to the upstream issue. This helps confi
 This repository serves as:
 - A **reference point** for users hitting the same bug.  
 - A **technical log** of bisect results, build steps, and logs.  
-- A **status tracker** until upstream resolves the regression.  
+- A **status tracker** until upstream resolves the regression.
+
+- 
 
 ---
 
 ```
+```
+# Show only suspend/resume events
+journalctl -b | grep -i suspend
+
+# Show only logind activity
+journalctl -b | grep -i logind
+
+# Show kernel power management events
+journalctl -b | grep -i PM:
+```
+
